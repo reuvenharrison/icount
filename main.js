@@ -3,8 +3,8 @@ function main() {
   const clients = get_clients(sid)
 
   const income_type_id = 4 // Fridays
-  const sheet_name = 'iCount problem'
-  const cell = 'aa1'
+  const sheet_name = 'iCount'
+  const cell = 'k1'
   const docnum = get_docnum(sheet_name, cell)
 
   const docs = search_docs(sid, income_type_id, docnum)
@@ -19,14 +19,14 @@ function update_sheet(sheet_name, docs, clients) {
     data = docs[i];
     const client_id = data.client_id
     const client = clients[client_id]
-    rows.push([data.dateissued, data.client_id, data.client_name, data.client_email, client.mobile, data.docnum, data.total]);
+    rows.push([data.dateissued, data.client_name, data.client_email, client.mobile, data.docnum, data.total]);
   }
 
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
   const sheet = spreadsheet.getSheetByName(sheet_name)
   const lastRow = sheet.getLastRow();
   console.log("last row: %d", lastRow)
-  const dataRange = sheet.getRange(lastRow+1, 1, rows.length, 7);
+  const dataRange = sheet.getRange(lastRow+1, 1, rows.length, 6);
   try {
     dataRange.setValues(rows);
   } catch (f) {
@@ -37,7 +37,7 @@ function update_sheet(sheet_name, docs, clients) {
 function get_docnum(sheet_name, cell) {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
   console.log('getting docnum from spreadsheet %s, sheet %s, cell %s', spreadsheet.getName(), sheet_name, cell);
-  
+
   const docnum = spreadsheet.getSheetByName(sheet_name).getRange(cell).getValue()
   if (!isInt(docnum)) {
     throw new Error('invalid docnum: '+docnum)
@@ -47,41 +47,43 @@ function get_docnum(sheet_name, cell) {
 }
 
 function get_clients(sid) {
-  var url = 'https://api.icount.co.il/api/v3.php/client/get_list'
+  const url = 'https://api.icount.co.il/api/v3.php/client/get_list'
 
-  var body = {
+  const body = {
     'sid': sid,
     'detail_level': 3
   };
 
-  var options = get_post_options(body)
+  const options = get_post_options(body)
 
   const response = send(url, options)
   if (!response.status) {
     throw new Error('get clients failed with '+response.reason)
   }
+  console.log('got %d clients', response.clients_count)
 
   return response.clients
 }
 
 function search_docs(sid, income_type_id, docnum) {
-  var url = 'https://api.icount.co.il/api/v3.php/doc/search'
-  const row_limit = 100
+  const url = 'https://api.icount.co.il/api/v3.php/doc/search'
+  const max_results = 200
 
-  var body = {
+  const body = {
     'sid': sid,
     'income_type_id': income_type_id,
-    'limit': row_limit,
-    'docnum': get_docnum_filter(docnum, row_limit),
+    'max_results': max_results,
+    'docnum': get_docnum_filter(docnum, max_results),
     'detail_level': 9
   };
 
-  var options = get_post_options(body)
+  const options = get_post_options(body)
 
   const response = send(url, options)
   if (!response.status) {
     throw new Error('search docs failed with '+response.reason)
   }
+  console.log('got %d docs', response.results_count)
 
   return response.results_list
 }
@@ -95,15 +97,15 @@ function get_docnum_filter(start, length) {
 }
 
 function login() {
-  var url = 'https://api.icount.co.il/api/v3.php/auth/login'
+  const url = 'https://api.icount.co.il/api/v3.php/auth/login'
 
-  var body = {
+  const body = {
     'cid': get_secret("cid"),
     'user': get_secret('user'),
     'pass': get_secret('password')
   };
 
-  var options = get_post_options(body)
+  const options = get_post_options(body)
 
   const response = send(url, options)
   if (!response.status) {
